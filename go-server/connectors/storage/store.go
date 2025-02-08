@@ -1,6 +1,9 @@
 package storage
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type Connector struct {
 	ID               string
@@ -11,8 +14,8 @@ type Connector struct {
 }
 
 type Storage interface {
-	SaveConnector(tenant *Connector) error
-	GetConnectorByID(ID string) (*Connector, error)
-	GetAllConnectors() ([]*Connector, error)
-	DeleteConnector(ID string) error
+	SaveConnector(context.Context, *Connector) (string, error)
+	GetConnectorByID(context.Context, string) (*Connector, error)
+	GetAllConnectors(context.Context) ([]*Connector, error)
+	DeleteConnector(context.Context, string) error
 }

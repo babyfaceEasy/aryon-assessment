@@ -11,8 +11,6 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-var connectorDB = make(map[string]*pb.Connector, 0)
-
 type ConnectorService struct {
 	storage  storage.Storage
 	smClient *secretsmanager.SecretsManager
@@ -26,7 +24,7 @@ func NewConnectorService(storage storage.Storage, smClient *secretsmanager.Secre
 }
 
 func (s *ConnectorService) GetConnector(ctx context.Context, ID string) (*pb.Connector, error) {
-	connectorRow, err := s.storage.GetConnectorByID(ID)
+	connectorRow, err := s.storage.GetConnectorByID(ctx, ID)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +39,7 @@ func (s *ConnectorService) GetConnector(ctx context.Context, ID string) (*pb.Con
 }
 
 func (s *ConnectorService) CreateConnector(ctx context.Context, slackToken string, connector *pb.Connector) error {
-	err := s.storage.SaveConnector(&storage.Connector{
+	_, err := s.storage.SaveConnector(ctx, &storage.Connector{
 		WorkspaceID:      connector.TenantId,
 		DefaultChannelID: connector.DefaultChannelId,
 	})
@@ -53,7 +51,7 @@ func (s *ConnectorService) CreateConnector(ctx context.Context, slackToken strin
 }
 
 func (s *ConnectorService) GetConnectors(ctx context.Context) []*pb.Connector {
-	conns, err := s.storage.GetAllConnectors()
+	conns, err := s.storage.GetAllConnectors(ctx)
 	if err != nil {
 		return nil
 	}
@@ -76,7 +74,7 @@ func (s *ConnectorService) GetConnectors(ctx context.Context) []*pb.Connector {
 }
 
 func (s *ConnectorService) DeleteConnector(ctx context.Context, ID string) error {
-	err := s.storage.DeleteConnector(ID)
+	err := s.storage.DeleteConnector(ctx, ID)
 	if err != nil {
 		return err
 	}
