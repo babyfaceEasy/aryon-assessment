@@ -2,9 +2,11 @@ package service
 
 import (
 	"context"
-	"log/slog"
+	"net/http"
+	"time"
 
 	pb "connector-recruitment/go-server/connectors/genproto"
+	"connector-recruitment/go-server/connectors/integrations/slack"
 	"connector-recruitment/go-server/connectors/storage"
 
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
@@ -88,8 +90,14 @@ func (s *ConnectorService) SendMessage(ctx context.Context, connectorID string, 
 		return err
 	}
 
-	// TODO: implement slack client to post the message
-	slog.Info("sending message to slack", "msg", message, "slack-channel", connectorActual.DefaultChannelID)
+	slackClient := slack.NewClient(slack.BaseUrl, &http.Client{
+		Timeout: 10 * time.Second,
+	})
 
+	if err := slackClient.SendMessageToChannel(ctx, connectorActual.Token, connectorActual.DefaultChannelID, message); err != nil {
+		return err
+	}
+
+	// slog.Info("sending message to slack", "msg", message, "slack-channel", connectorActual.DefaultChannelID)
 	return nil
 }
