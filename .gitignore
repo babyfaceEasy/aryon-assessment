@@ -132,3 +132,6 @@ fabric.properties
 .ionide
 
 # End of https://www.toptal.com/developers/gitignore/api/go,goland+all,visualstudiocode
+
+# apple hidden files
+.DS_Store

@@ -1,15 +1,13 @@
-package server
+package main
 
 import (
 	"context"
 	"log/slog"
-	"net"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
-	"google.golang.org/grpc"
 )
 
 func main() {
@@ -31,17 +29,24 @@ func main() {
 		slog.Error("failed to create secret", "err", err)
 	}
 
-	// Create a new gRPC server
-	grpcServer := grpc.NewServer()
+	/*
+		// Create a new gRPC server
+		grpcServer := grpc.NewServer()
 
-	// Listen on port 50051
-	lis, err := net.Listen("tcp", ":50051")
-	if err != nil {
-		slog.Error("failed to listen: %v", err)
-	}
+		// Listen on port 50051
+		lis, err := net.Listen("tcp", ":50051")
+		if err != nil {
+			slog.Error("failed to listen: %v", err)
+		}
 
-	slog.Info("Starting Slack Connector gRPC server on :50051")
-	if err := grpcServer.Serve(lis); err != nil {
-		slog.Error("failed to serve: %v", err)
+		slog.Info("Starting Slack Connector gRPC server on :50051")
+		if err := grpcServer.Serve(lis); err != nil {
+			slog.Error("failed to serve: %v", err)
+		}
+	*/
+
+	grpcServer := NewGRPCServer(":50051", smClient)
+	if err := grpcServer.Run(); err != nil {
+		slog.Error("failed to serve", "err", err)
 	}
 }

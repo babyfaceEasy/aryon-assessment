@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+option go_package = "connector-recruitment/genproto";
+
+import "google/protobuf/timestamp.proto";
+
+service connectorService {
+    rpc CreateConnector(CreateConnectorRequest) returns (CreateConnectorResponse) {}
+    rpc GetConnector(GetConnectorRequest) returns (GetConnectorResponse) {}
+    rpc GetConnectors(GetConnectorsRequest) returns (GetConnectorsResponse) {}
+    rpc DeleteConnector(DeleteConnectorRequest) returns (DeleteConnectorResponse) {} 
+}
+
+message Connector {
+    string id = 1;
+    string tenant_id = 2;
+    google.protobuf.Timestamp created_at = 3;
+    google.protobuf.Timestamp updated_at = 4;
+    string default_channel_id = 5;
+}
+
+message CreateConnectorRequest {
+    string slack_token = 1;
+    string tenant_id = 2;
+    string default_channel_id = 3;
+}
+message CreateConnectorResponse {}
+message GetConnectorRequest {
+    string connector_id = 1;
+}
+message GetConnectorResponse {
+    Connector connector = 1;
+}
+message DeleteConnectorRequest {
+    string connector_id = 1;
+}
+message DeleteConnectorResponse {}
+
+message GetConnectorsRequest{}
+message GetConnectorsResponse {
+    repeated Connector connectors = 1;
+}
