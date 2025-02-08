@@ -1,17 +1,18 @@
 package main
 
 import (
-	"log"
+	"context"
+	"fmt"
 	"log/slog"
 	"net"
 
-	"connector-recruitment/go-server/connectors/db"
+	"connector-recruitment/go-server/connectors/configs"
 	"connector-recruitment/go-server/connectors/handler"
 	"connector-recruitment/go-server/connectors/service"
 	"connector-recruitment/go-server/connectors/storage"
 
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
 )
 
@@ -27,18 +28,20 @@ func NewGRPCServer(addr string, secretManager *secretsmanager.SecretsManager) *g
 func (s *gRPCServer) Run() error {
 	lis, err := net.Listen("tcp", s.addr)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		return fmt.Errorf("failed to listen: %w", err)
 	}
 
 	grpcServer := grpc.NewServer()
 
-	// get db
-	db, err := db.NewPGXStorage(pgx.ConnConfig{}) // TODO: fill these from env variables
+	// Create a connection pool
+	pool, err := pgxpool.New(context.Background(), configs.Envs.DBUrl)
 	if err != nil {
-		log.Fatalf("Failed to connect to PostgreSQL: %v", err)
+		return fmt.Errorf("Unable to connect to database: %w", err)
 	}
+	defer pool.Close()
 
-	storage := storage.NewSqlStorage(db)
+	// create a new storage
+	storage := storage.NewSqlStorage(pool, s.secretManager)
 
 	// register our grpc services
 	connectorService := service.NewConnectorService(storage, s.secretManager)

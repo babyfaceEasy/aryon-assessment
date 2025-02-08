@@ -135,3 +135,9 @@ fabric.properties
 
 # apple hidden files
 .DS_Store
+
+# env files
+.env
+.env.local
+
+hold.txt

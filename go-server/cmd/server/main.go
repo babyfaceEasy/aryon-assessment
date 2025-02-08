@@ -47,6 +47,6 @@ func main() {
 
 	grpcServer := NewGRPCServer(":50051", smClient)
 	if err := grpcServer.Run(); err != nil {
-		slog.Error("failed to serve", "err", err)
+		slog.Error("failed to serve: ", "err", err)
 	}
 }

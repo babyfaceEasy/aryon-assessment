@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"errors"
+	"log/slog"
 
 	pb "connector-recruitment/go-server/connectors/genproto"
 	"connector-recruitment/go-server/connectors/storage"
@@ -42,6 +42,7 @@ func (s *ConnectorService) CreateConnector(ctx context.Context, slackToken strin
 	_, err := s.storage.SaveConnector(ctx, &storage.Connector{
 		WorkspaceID:      connector.TenantId,
 		DefaultChannelID: connector.DefaultChannelId,
+		Token:            slackToken,
 	})
 	if err != nil {
 		return err
@@ -82,10 +83,13 @@ func (s *ConnectorService) DeleteConnector(ctx context.Context, ID string) error
 }
 
 func (s *ConnectorService) SendMessage(ctx context.Context, connectorID string, message string) error {
-	/*
-		Get the default channel from the repository and get the slack token from secret manager
-		call the slack client to push the message to the default channel
-	*/
+	connectorActual, err := s.storage.GetConnectorByID(ctx, connectorID)
+	if err != nil {
+		return err
+	}
 
-	return errors.New("not implemented yet")
+	// TODO: implement slack client to post the message
+	slog.Info("sending message to slack", "msg", message, "slack-channel", connectorActual.DefaultChannelID)
+
+	return nil
 }

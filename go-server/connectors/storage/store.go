@@ -11,6 +11,7 @@ type Connector struct {
 	DefaultChannelID string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	Token            string
 }
 
 type Storage interface {
