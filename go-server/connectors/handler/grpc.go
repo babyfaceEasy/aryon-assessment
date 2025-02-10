@@ -3,10 +3,10 @@ package handler
 import (
 	"context"
 	"errors"
-	"log/slog"
 
 	"connector-recruitment/go-server/connectors/errs"
 	pb "connector-recruitment/go-server/connectors/genproto"
+	"connector-recruitment/go-server/connectors/logger"
 	"connector-recruitment/go-server/connectors/types"
 
 	"google.golang.org/grpc"
@@ -15,12 +15,14 @@ import (
 )
 
 type ConnectorsGrpcHandler struct {
+	logger           logger.Logger
 	connectorService types.ConnectorService
 	pb.UnimplementedConnectorServiceServer
 }
 
-func NewGrpcConnectorsService(grpc *grpc.Server, connectorService types.ConnectorService) {
+func NewGrpcConnectorsService(grpc *grpc.Server, connectorService types.ConnectorService, logger logger.Logger) {
 	gRPCHandler := &ConnectorsGrpcHandler{
+		logger:           logger,
 		connectorService: connectorService,
 	}
 
@@ -36,11 +38,11 @@ func (h *ConnectorsGrpcHandler) GetConnector(ctx context.Context, req *pb.GetCon
 	if err != nil {
 
 		if errors.Is(err, errs.ErrConnectorNotFound) {
-			slog.Warn("GetConnector not found", "id", req.ConnectorId)
+			h.logger.Warn("GetConnector not found", "id", req.ConnectorId)
 			return nil, status.Errorf(codes.NotFound, "connector with id %s not found", req.ConnectorId)
 		}
 
-		slog.Error("GetConnector internal error", "id", req.ConnectorId, "error", "failed to fetch connector data")
+		h.logger.Error("GetConnector internal error", "id", req.ConnectorId, "msg", "failed to fetch connector data", "err", err)
 		return nil, status.Errorf(codes.Internal, "internal server error: failed to fetch connector data")
 	}
 
@@ -70,7 +72,7 @@ func (h *ConnectorsGrpcHandler) CreateConnector(ctx context.Context, req *pb.Cre
 		DefaultChannelId: req.DefaultChannelId,
 	})
 	if err != nil {
-		slog.Error("CreateConnector internal error", "error", err.Error())
+		h.logger.Error("CreateConnector internal error", "err", err.Error())
 		return nil, status.Errorf(codes.Internal, "internal server error: failed to create connector")
 	}
 
@@ -93,7 +95,7 @@ func (h *ConnectorsGrpcHandler) DeleteConnector(ctx context.Context, req *pb.Del
 			return nil, nil
 		}
 
-		slog.Error("failed to delete connector", "error", err)
+		h.logger.Error("failed to delete connector", "err", err)
 		return nil, status.Errorf(codes.Internal, "internal server error: failed to delete connector")
 	}
 

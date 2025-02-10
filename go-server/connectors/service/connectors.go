@@ -7,6 +7,7 @@ import (
 
 	pb "connector-recruitment/go-server/connectors/genproto"
 	"connector-recruitment/go-server/connectors/integrations/slack"
+	"connector-recruitment/go-server/connectors/logger"
 	"connector-recruitment/go-server/connectors/storage"
 
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
@@ -14,12 +15,14 @@ import (
 )
 
 type ConnectorService struct {
+	logger   logger.Logger
 	storage  storage.Storage
 	smClient *secretsmanager.SecretsManager
 }
 
-func NewConnectorService(storage storage.Storage, smClient *secretsmanager.SecretsManager) *ConnectorService {
+func NewConnectorService(storage storage.Storage, smClient *secretsmanager.SecretsManager, logger logger.Logger) *ConnectorService {
 	return &ConnectorService{
+		logger:   logger,
 		storage:  storage,
 		smClient: smClient,
 	}
@@ -92,7 +95,7 @@ func (s *ConnectorService) SendMessage(ctx context.Context, connectorID string, 
 
 	slackClient := slack.NewClient(slack.BaseUrl, &http.Client{
 		Timeout: 10 * time.Second,
-	})
+	}, s.logger)
 
 	if err := slackClient.SendMessageToChannel(ctx, connectorActual.Token, connectorActual.DefaultChannelID, message); err != nil {
 		return err

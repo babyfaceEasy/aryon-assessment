@@ -47,9 +47,9 @@ func (s *gRPCServer) Run() error {
 	defer pool.Close()
 
 	// Setup storage and register gRPC services
-	storage := storage.NewSqlStorage(pool, s.secretManager)
-	connectorService := service.NewConnectorService(storage, s.secretManager)
-	handler.NewGrpcConnectorsService(grpcServer, connectorService)
+	storage := storage.NewSqlStorage(pool, s.secretManager, s.logger)
+	connectorService := service.NewConnectorService(storage, s.secretManager, s.logger)
+	handler.NewGrpcConnectorsService(grpcServer, connectorService, s.logger)
 
 	s.logger.Info("Starting Slack Connector gRPC server on ", "info", s.addr)
 

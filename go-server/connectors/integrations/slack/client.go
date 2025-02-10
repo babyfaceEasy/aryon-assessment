@@ -5,8 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
+
+	"connector-recruitment/go-server/connectors/logger"
 )
 
 const BaseUrl = "https://slack.com/api"
@@ -18,12 +19,14 @@ type HttpClient interface {
 type Client struct {
 	baseURL    string
 	httpClient HttpClient
+	logger     logger.Logger
 }
 
-func NewClient(baseURL string, httpClient HttpClient) *Client {
+func NewClient(baseURL string, httpClient HttpClient, logger logger.Logger) *Client {
 	return &Client{
 		baseURL:    baseURL,
 		httpClient: httpClient,
+		logger:     logger,
 	}
 }
 
@@ -84,8 +87,6 @@ func (c *Client) SendMessageToChannel(ctx context.Context, token, channelID, msg
 		return fmt.Errorf("slack API error: %s", slackResp.Error)
 	}
 
-	slog.Info("Message sent successfully", "slack-channel", slackResp.Channel, "timestamp", slackResp.TS)
-
-	fmt.Printf("Message sent successfully to channel %s at timestamp %s\n", slackResp.Channel, slackResp.TS)
+	c.logger.Info("Message sent successfully", "slack-channel", slackResp.Channel, "timestamp", slackResp.TS)
 	return nil
 }
