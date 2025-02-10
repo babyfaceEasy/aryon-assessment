@@ -3,7 +3,7 @@ services:
     container_name: grpc_server
     build:
         context: .
-        dockerfile: docker/Dockerfile
+        dockerfile: docker/Dockerfile.dev
     env_file:
       - .env
     environment:
