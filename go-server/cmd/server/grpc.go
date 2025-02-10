@@ -4,14 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"connector-recruitment/go-server/connectors/configs"
+	"connector-recruitment/go-server/connectors/config"
 	"connector-recruitment/go-server/connectors/handler"
+	"connector-recruitment/go-server/connectors/logger"
 	"connector-recruitment/go-server/connectors/service"
 	"connector-recruitment/go-server/connectors/storage"
 
@@ -23,10 +23,11 @@ import (
 type gRPCServer struct {
 	addr          string
 	secretManager *secretsmanager.SecretsManager
+	logger        logger.Logger
 }
 
-func NewGRPCServer(addr string, secretManager *secretsmanager.SecretsManager) *gRPCServer {
-	return &gRPCServer{addr: addr, secretManager: secretManager}
+func NewGRPCServer(addr string, secretManager *secretsmanager.SecretsManager, logger logger.Logger) *gRPCServer {
+	return &gRPCServer{addr: addr, secretManager: secretManager, logger: logger}
 }
 
 func (s *gRPCServer) Run() error {
@@ -39,7 +40,7 @@ func (s *gRPCServer) Run() error {
 	grpcServer := grpc.NewServer()
 
 	// Create a connection pool
-	pool, err := pgxpool.New(context.Background(), configs.Envs.DBUrl)
+	pool, err := pgxpool.New(context.Background(), config.Envs.DBUrl)
 	if err != nil {
 		return fmt.Errorf("unable to connect to database: %w", err)
 	}
@@ -50,7 +51,7 @@ func (s *gRPCServer) Run() error {
 	connectorService := service.NewConnectorService(storage, s.secretManager)
 	handler.NewGrpcConnectorsService(grpcServer, connectorService)
 
-	slog.Info("Starting Slack Connector gRPC server on ", "info", s.addr)
+	s.logger.Info("Starting Slack Connector gRPC server on ", "info", s.addr)
 
 	// Graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -67,9 +68,9 @@ func (s *gRPCServer) Run() error {
 
 	select {
 	case <-ctx.Done():
-		slog.Info("Shutdown signal received, gracefully stopping gRPC server")
-		timer := time.AfterFunc(time.Duration(configs.Envs.GRPCGracefulShutdownTimeout)*time.Second, func() {
-			slog.Warn("gRPC server couldn't stop gracefully in time. Doing force stop.")
+		s.logger.Info("Shutdown signal received, gracefully stopping gRPC server")
+		timer := time.AfterFunc(time.Duration(config.Envs.GRPCGracefulShutdownTimeout)*time.Second, func() {
+			s.logger.Warn("gRPC server couldn't stop gracefully in time. Doing force stop.")
 			grpcServer.Stop()
 		})
 		defer timer.Stop()
@@ -78,13 +79,13 @@ func (s *gRPCServer) Run() error {
 		grpcServer.GracefulStop()
 		elapsed := time.Since(startTime)
 
-		slog.Info("gRPC server gracefully stopped", "elapsed", elapsed)
+		s.logger.Info("gRPC server gracefully stopped", "elapsed", elapsed)
 	case err := <-serverErrCh:
 		if err != nil {
 			return fmt.Errorf("gRPC server error: %w", err)
 		}
 	}
 
-	slog.Info("gRPC server has been gracefully stopped")
+	s.logger.Info("gRPC server has been gracefully stopped")
 	return nil
 }

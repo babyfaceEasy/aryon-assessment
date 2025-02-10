@@ -4,6 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"connector-recruitment/go-server/connectors/logger"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -11,6 +13,10 @@ import (
 )
 
 func main() {
+	// setup logger
+	slogger := logger.NewProductionLogger()
+	slog.SetDefault(slogger)
+
 	// Setup AWS session for LocalStack
 	awsConfig := &aws.Config{
 		Credentials:      credentials.NewStaticCredentials("test", "test", ""),
@@ -26,7 +32,7 @@ func main() {
 		SecretString: aws.String("my-super-secret"),
 	})
 	if err != nil {
-		slog.Error("failed to create secret", "err", err)
+		slogger.Error("failed to create secret", "err", err)
 	}
 
 	/*
@@ -45,8 +51,8 @@ func main() {
 		}
 	*/
 
-	grpcServer := NewGRPCServer(":50051", smClient)
+	grpcServer := NewGRPCServer(":50051", smClient, slogger)
 	if err := grpcServer.Run(); err != nil {
-		slog.Error("failed to serve: ", "err", err)
+		slogger.Error("failed to serve: ", "err", err)
 	}
 }
