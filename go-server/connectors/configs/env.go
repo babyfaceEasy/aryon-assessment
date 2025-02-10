@@ -8,7 +8,8 @@ import (
 )
 
 type Config struct {
-	DBUrl string
+	DBUrl                       string
+	GRPCGracefulShutdownTimeout int64
 }
 
 var Envs = initConfig()
@@ -17,7 +18,8 @@ func initConfig() Config {
 	godotenv.Load()
 
 	return Config{
-		DBUrl: getEnv("DATABASE_URL", ""),
+		DBUrl:                       getEnv("DATABASE_URL", ""),
+		GRPCGracefulShutdownTimeout: getEnvAsInt("GRPC_GRACEFUL_SHUTDOWN_TIMEOUT", 10),
 	}
 }
 
