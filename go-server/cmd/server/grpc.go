@@ -11,6 +11,7 @@ import (
 
 	"connector-recruitment/go-server/connectors/config"
 	"connector-recruitment/go-server/connectors/handler"
+	"connector-recruitment/go-server/connectors/interceptors"
 	"connector-recruitment/go-server/connectors/logger"
 	"connector-recruitment/go-server/connectors/service"
 	"connector-recruitment/go-server/connectors/storage"
@@ -37,7 +38,9 @@ func (s *gRPCServer) Run() error {
 	}
 
 	// Create a new gRPC server instance
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(interceptors.LoggingUnaryInterceptor(s.logger)),
+	)
 
 	// Create a connection pool
 	pool, err := pgxpool.New(context.Background(), config.Envs.DBUrl)
@@ -51,7 +54,7 @@ func (s *gRPCServer) Run() error {
 	connectorService := service.NewConnectorService(storage, s.secretManager, s.logger)
 	handler.NewGrpcConnectorsService(grpcServer, connectorService, s.logger)
 
-	s.logger.Info("Starting Slack Connector gRPC server on ", "info", s.addr)
+	s.logger.Info("Starting gRPC server", "addr", lis.Addr().String())
 
 	// Graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
