@@ -2,12 +2,17 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"log/slog"
 	"net"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"connector-recruitment/go-server/connectors/configs"
+	"connector-recruitment/go-server/connectors/config"
 	"connector-recruitment/go-server/connectors/handler"
+	"connector-recruitment/go-server/connectors/interceptors"
+	"connector-recruitment/go-server/connectors/logger"
 	"connector-recruitment/go-server/connectors/service"
 	"connector-recruitment/go-server/connectors/storage"
 
@@ -19,10 +24,11 @@ import (
 type gRPCServer struct {
 	addr          string
 	secretManager *secretsmanager.SecretsManager
+	logger        logger.Logger
 }
 
-func NewGRPCServer(addr string, secretManager *secretsmanager.SecretsManager) *gRPCServer {
-	return &gRPCServer{addr: addr, secretManager: secretManager}
+func NewGRPCServer(addr string, secretManager *secretsmanager.SecretsManager, logger logger.Logger) *gRPCServer {
+	return &gRPCServer{addr: addr, secretManager: secretManager, logger: logger}
 }
 
 func (s *gRPCServer) Run() error {
@@ -31,23 +37,58 @@ func (s *gRPCServer) Run() error {
 		return fmt.Errorf("failed to listen: %w", err)
 	}
 
-	grpcServer := grpc.NewServer()
+	// Create a new gRPC server instance
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(interceptors.LoggingUnaryInterceptor(s.logger)),
+	)
 
 	// Create a connection pool
-	pool, err := pgxpool.New(context.Background(), configs.Envs.DBUrl)
+	pool, err := pgxpool.New(context.Background(), config.Envs.DBUrl)
 	if err != nil {
-		return fmt.Errorf("Unable to connect to database: %w", err)
+		return fmt.Errorf("unable to connect to database: %w", err)
 	}
 	defer pool.Close()
 
-	// create a new storage
-	storage := storage.NewSqlStorage(pool, s.secretManager)
+	// Setup storage and register gRPC services
+	storage := storage.NewSqlStorage(pool, s.secretManager, s.logger)
+	connectorService := service.NewConnectorService(storage, s.secretManager, s.logger)
+	handler.NewGrpcConnectorsService(grpcServer, connectorService, s.logger)
 
-	// register our grpc services
-	connectorService := service.NewConnectorService(storage, s.secretManager)
-	handler.NewGrpcConnectorsService(grpcServer, connectorService)
+	s.logger.Info("Starting gRPC server", "addr", lis.Addr().String())
 
-	slog.Info("Starting Slack Connector gRPC server on ", "info", s.addr)
+	// Graceful shutdown
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
-	return grpcServer.Serve(lis)
+	serverErrCh := make(chan error, 1)
+	go func() {
+		// Serve will block until the server is stopped
+		err := grpcServer.Serve(lis)
+		if err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			serverErrCh <- err
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		s.logger.Info("Shutdown signal received, gracefully stopping gRPC server")
+		timer := time.AfterFunc(time.Duration(config.Envs.GRPCGracefulShutdownTimeout)*time.Second, func() {
+			s.logger.Warn("gRPC server couldn't stop gracefully in time. Doing force stop.")
+			grpcServer.Stop()
+		})
+		defer timer.Stop()
+
+		startTime := time.Now()
+		grpcServer.GracefulStop()
+		elapsed := time.Since(startTime)
+
+		s.logger.Info("gRPC server gracefully stopped", "elapsed", elapsed)
+	case err := <-serverErrCh:
+		if err != nil {
+			return fmt.Errorf("gRPC server error: %w", err)
+		}
+	}
+
+	s.logger.Info("gRPC server has been gracefully stopped")
+	return nil
 }

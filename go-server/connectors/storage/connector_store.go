@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"sync"
 
+	"connector-recruitment/go-server/connectors/logger"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/jackc/pgx/v5"
@@ -13,12 +15,13 @@ import (
 )
 
 type SqlStorage struct {
+	logger   logger.Logger
 	db       *pgxpool.Pool
 	smClient *secretsmanager.SecretsManager
 }
 
-func NewSqlStorage(db *pgxpool.Pool, smClient *secretsmanager.SecretsManager) *SqlStorage {
-	return &SqlStorage{db: db, smClient: smClient}
+func NewSqlStorage(db *pgxpool.Pool, smClient *secretsmanager.SecretsManager, logger logger.Logger) *SqlStorage {
+	return &SqlStorage{db: db, smClient: smClient, logger: logger}
 }
 
 // SaveConnector inserts a new connector and returns its ID
@@ -63,7 +66,7 @@ func (s *SqlStorage) SaveConnector(ctx context.Context, connector *Connector) (s
 		return "", fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	fmt.Printf("secret manager result: %+v", result)
+	s.logger.Debug("created secret name", "secret-name", result.Name)
 
 	return connectorID, nil
 }
@@ -95,8 +98,6 @@ func (s *SqlStorage) GetConnectorByID(ctx context.Context, connectorID string) (
 	}
 
 	c.Token = aws.StringValue(result.SecretString) // Store secret in struct
-
-	// fmt.Printf("secret manager get result: %+v\n", result)
 
 	return c, nil
 }
