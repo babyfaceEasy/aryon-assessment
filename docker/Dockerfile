@@ -1,30 +1,37 @@
-# Dockerfile.prod
+ARG GO_VERSION=1.23
 
 # Build stage
-FROM golang:1.23-alpine AS builder
+FROM golang:${GO_VERSION}-alpine AS builder
 
 RUN apk add --no-cache git
 
 WORKDIR /app
 
-# Copy go.mod and go.sum first to leverage Docker caching.
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
 
-# package is in go-server/cmd/server/.
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o grpcserver ./go-server/cmd/server
+RUN CGO_ENABLED=0 go build -ldflags="-w -s" -o grpcserver ./go-server/cmd/server
 
-FROM alpine:latest
+# Intermediate stage for certificates and grpc_health_probe
+FROM alpine:latest AS certs
+RUN apk add --no-cache ca-certificates wget && \
+    wget -q -O /usr/local/bin/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.4.11/grpc_health_probe-linux-amd64 && \
+    chmod +x /usr/local/bin/grpc_health_probe
 
-RUN apk --no-cache add ca-certificates
+# Final stage using scratch
+FROM scratch
 
-WORKDIR /app
+# Copy CA certificates and the grpc_health_probe binary.
+COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=certs /usr/local/bin/grpc_health_probe /usr/local/bin/grpc_health_probe
 
-COPY --from=builder /app/grpcserver .
+# Copy the static binary.
+COPY --from=builder /app/grpcserver /grpcserver
+COPY  --from=builder /app/.env .
 
 EXPOSE 50051
 
-# Start the gRPC server.
-CMD ["./grpcserver"]
+# Run binary directly.
+CMD ["/grpcserver"]

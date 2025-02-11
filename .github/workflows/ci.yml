@@ -1,0 +1,55 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Check out the repository.
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # 2. Set up Go.
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
+
+      # 3. Cache Go modules to speed up builds.
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+
+      # 4. Download dependencies.
+      - name: Download Dependencies
+        run: go mod download
+
+      # 5. Run tests.
+      - name: Run Tests
+        run: go test -v ./...
+
+      # 6. Lint (format) the code.
+      - name: Check Code Format
+        run: go fmt ./...
+
+      # 7. Build the binary.
+      - name: Build Binary
+        run: |
+          CGO_ENABLED=0 go build -ldflags="-w -s" -o grpcserver ./go-server/cmd/server
+
+      # 8. Build Docker image using the production Dockerfile.
+      - name: Build Docker Image (Production)
+        run: |
+          docker build -f docker/Dockerfile -t grpcserver-prod .

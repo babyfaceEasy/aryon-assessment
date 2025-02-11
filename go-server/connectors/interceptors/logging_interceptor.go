@@ -23,7 +23,7 @@ func LoggingUnaryInterceptor(logger logger.Logger) grpc.UnaryServerInterceptor {
 		resp, err := handler(ctx, req)
 
 		elapsed := time.Since(startTime)
-		elapsedStr := fmt.Sprintf("%.2fms", elapsed.Seconds()*1000) // convert it to 
+		elapsedStr := fmt.Sprintf("%.2fms", elapsed.Seconds()*1000) // convert it to
 
 		// Log the method name, elapsed time, and any error
 		logger.Info("Unary RPC completed",

@@ -1,7 +1,4 @@
--- Enable UUID extension if not already enabled
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Create tenants table if it does not exist
+-- Create connectors table if it does not exist
 DO $$ 
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'connectors') THEN
@@ -13,7 +10,7 @@ BEGIN
             updated_at TIMESTAMPTZ DEFAULT NOW()
         );
 
-         -- add index to connectors table to improve performance
+        -- add index to connectors table to improve performance
         CREATE INDEX idx_connectors_id ON connectors(id);
     END IF;
 END $$;
