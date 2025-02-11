@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 
+	"connector-recruitment/go-server/connectors/config"
 	"connector-recruitment/go-server/connectors/logger"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -21,7 +22,7 @@ func main() {
 	awsConfig := &aws.Config{
 		Credentials:      credentials.NewStaticCredentials("test", "test", ""),
 		Region:           aws.String("us-east-1"),
-		Endpoint:         aws.String("http://localhost:4566"), // LocalStack default
+		Endpoint:         aws.String(config.Envs.LocalStackEndpoint), // Points to the LocalStack container
 		S3ForcePathStyle: aws.Bool(true),
 	}
 	sess := session.Must(session.NewSession(awsConfig))

@@ -18,6 +18,11 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o grpcserver ./go-s
 
 FROM alpine:latest
 
+# Install CA certificates and download grpc_health_probe.
+RUN apk --no-cache add ca-certificates wget && \
+    wget -q -O /usr/local/bin/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.4.11/grpc_health_probe-linux-amd64 && \
+    chmod +x /usr/local/bin/grpc_health_probe
+
 RUN apk --no-cache add ca-certificates
 
 WORKDIR /app

@@ -19,6 +19,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 type gRPCServer struct {
@@ -41,6 +43,11 @@ func (s *gRPCServer) Run() error {
 	grpcServer := grpc.NewServer(
 		grpc.UnaryInterceptor(interceptors.LoggingUnaryInterceptor(s.logger)),
 	)
+
+	// health server
+	healthServer := health.NewServer()
+	healthpb.RegisterHealthServer(grpcServer, healthServer)
+	healthServer.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
 
 	// Create a connection pool
 	pool, err := pgxpool.New(context.Background(), config.Envs.DBUrl)

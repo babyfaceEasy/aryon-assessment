@@ -9,6 +9,7 @@ services:
     environment:
       - SERVICE_NAME=slack-connector
       - PORT=50051
+      - LOG_LEVEL=debug
     ports:
       - "50051:50051"
     restart: always
