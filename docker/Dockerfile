@@ -1,5 +1,3 @@
-# Dockerfile.prod
-
 ARG GO_VERSION=1.23
 
 # Build stage
@@ -24,7 +22,6 @@ RUN apk add --no-cache ca-certificates wget && \
 
 # Final stage using scratch
 FROM scratch
-#FROM gcr.io/distroless/static-debian11
 
 # Copy CA certificates and the grpc_health_probe binary.
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
@@ -36,5 +33,5 @@ COPY  --from=builder /app/.env .
 
 EXPOSE 50051
 
-# SRun binary directly.
+# Run binary directly.
 CMD ["/grpcserver"]

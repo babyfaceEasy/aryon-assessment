@@ -8,10 +8,10 @@ import (
 	"connector-recruitment/go-server/connectors/config"
 )
 
-func getLogLevel() slog.Level {
+func getLogLevel(env config.Env) slog.Level {
 	level := slog.LevelInfo // default
 
-	switch strings.ToLower(config.Envs.LogLevel) {
+	switch strings.ToLower(env.LogLevel) {
 	case "debug":
 		level = slog.LevelDebug
 	case "info":
@@ -26,10 +26,10 @@ func getLogLevel() slog.Level {
 }
 
 // NewProductionLogger returns a logger configured to output JSON formatted logs.
-func NewProductionLogger() *slog.Logger {
+func NewProductionLogger(env config.Env) *slog.Logger {
 	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: getLogLevel(), // Set the log level to info.
+		Level: getLogLevel(env), // Set the log level to info.
 	})
-	newLogger := slog.New(handler).With("service", config.Envs.ServiceName)
+	newLogger := slog.New(handler).With("service", env.Name)
 	return newLogger
 }
