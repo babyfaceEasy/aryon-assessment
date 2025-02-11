@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log/slog"
 	"os"
 	"strconv"
 
@@ -8,18 +9,27 @@ import (
 )
 
 type Config struct {
-	DBUrl                       string
 	GRPCGracefulShutdownTimeout int64
+	LogLevel                    string
+	ServiceName                 string
+	DBUrl                       string
+	LocalStackEndpoint          string
 }
 
 var Envs = initConfig()
 
 func initConfig() Config {
-	godotenv.Load()
+	if err := godotenv.Load(); err != nil {
+		slog.Error("Error loading .env file", "err", err)
+		os.Exit(1)
+	}
 
 	return Config{
+		ServiceName:                 getEnv("SERVICE_NAME", "slack-connector"),
+		LogLevel:                    getEnv("LOG_LEVEL", "info"),
 		DBUrl:                       getEnv("DATABASE_URL", ""),
-		GRPCGracefulShutdownTimeout: getEnvAsInt("GRPC_GRACEFUL_SHUTDOWN_TIMEOUT", 10),
+		GRPCGracefulShutdownTimeout: getEnvAsInt("GRPC_GRACEFUL_SHUTDOWN_TIMEOUT", 5),
+		LocalStackEndpoint:          getEnv("LOCALSTACK_ENDPOINT", "http://localstack:4566"),
 	}
 }
 
