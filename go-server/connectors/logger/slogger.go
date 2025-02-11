@@ -30,5 +30,6 @@ func NewProductionLogger() *slog.Logger {
 	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: getLogLevel(), // Set the log level to info.
 	})
-	return slog.New(handler)
+	newLogger := slog.New(handler).With("service", config.Envs.ServiceName)
+	return newLogger
 }
